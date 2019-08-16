@@ -9,6 +9,21 @@ import {
   staticStateGenerator
 } from './staticGenerators'
 
+function registerDynamicModule<S>(modOpt: DynamicModuleOptions, module: Mod<S, any>) {
+  if (!modOpt.name) {
+    throw new Error('Name of module not provided in decorator options')
+  }
+
+  if (!modOpt.store) {
+    throw new Error('Store not provided in decorator options when using dynamic option')
+  }
+
+  modOpt.store.registerModule(
+    modOpt.name, // TODO: Handle nested modules too in future
+    module
+  )
+}
+
 function moduleDecoratorFactory<S>(moduleOptions: ModuleOptions) {
   return function<TFunction extends Function>(constructor: TFunction): TFunction | void {
     const module: Function & Mod<S, any> = constructor
@@ -47,7 +62,14 @@ function moduleDecoratorFactory<S>(moduleOptions: ModuleOptions) {
     if (modOpt.name) {
       Object.defineProperty(constructor, '_genStatic', {
         value: (store?: Store<any>) => {
+          if (!store || modOpt.store) {
+            throw new Error(`ERR_STORE_NOT_PROVIDED: To use getModule(), either the module
+            should be decorated with store in decorator, i.e. @Module({store: store}) or
+            store should be passed when calling getModule(), i.e. getModule(MyModule, this.$store)`)
+          }
+
           let statics = { store: store || modOpt.store }
+
           // ===========  For statics ==============
           // ------ state -------
           staticStateGenerator(module, modOpt, statics)
@@ -75,18 +97,7 @@ function moduleDecoratorFactory<S>(moduleOptions: ModuleOptions) {
     }
 
     if (modOpt.dynamic) {
-      if (!modOpt.name) {
-        throw new Error('Name of module not provided in decorator options')
-      }
-
-      if (!modOpt.store) {
-        throw new Error('Store not provided in decorator options when using dynamic option')
-      }
-
-      modOpt.store.registerModule(
-        modOpt.name, // TODO: Handle nested modules too in future
-        module
-      )
+      registerDynamicModule(modOpt, module)
     }
     return constructor
   }

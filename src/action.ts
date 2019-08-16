@@ -13,6 +13,8 @@ function actionDecoratorFactory<T>(params?: ActionDecoratorParams): MethodDecora
   const { commit = undefined, rawError = false } = params || {}
   return function(target: Object, key: string | symbol, descriptor: TypedPropertyDescriptor<any>) {
     const module = target.constructor as Mod<T, any>
+    const moduleName = getModuleName(module)
+
     if (!module.actions) {
       module.actions = {}
     }
@@ -25,7 +27,6 @@ function actionDecoratorFactory<T>(params?: ActionDecoratorParams): MethodDecora
         let actionPayload = null
 
         if ((module as any)._genStatic) {
-          const moduleName = getModuleName(module)
           const moduleAccessor = context.rootGetters[moduleName]
             ? context.rootGetters[moduleName]
             : getModule(module as typeof VuexModule)
